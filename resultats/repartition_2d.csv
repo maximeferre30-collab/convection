@@ -1,0 +1,4 @@
+repartition,T_moy_fin,T_max_fin,dT_point_chaud_max,T_surf_moins_T_moy,v_max_cm_s,marge_saturation_min
+uniforme,99.69,100.24,0.55,-0.24,9.13,0.78
+centre,99.66,100.28,0.61,-0.21,9.26,0.77
+bord,99.66,100.36,0.70,-0.22,8.38,0.75

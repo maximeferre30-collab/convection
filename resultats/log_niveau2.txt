@@ -1,0 +1,14 @@
+[vérif] adiabatique : écart max T_moy 2D / 0D = 0.000 K sur 73 h
+[uniforme] T_moy fin  99.69 °C | T_max 100.24 °C | surchauffe max 0.55 K | T_surf - T_moy -0.24 K | v_max 9.1 cm/s | marge à saturation locale min   0.8 K
+[  centre] T_moy fin  99.66 °C | T_max 100.28 °C | surchauffe max 0.61 K | T_surf - T_moy -0.21 K | v_max 9.3 cm/s | marge à saturation locale min   0.8 K
+[    bord] T_moy fin  99.66 °C | T_max 100.36 °C | surchauffe max 0.70 K | T_surf - T_moy -0.22 K | v_max 8.4 cm/s | marge à saturation locale min   0.7 K
+
+[maillage / turbulence] répartition 'bord', t = 6 h
+  maillage_nx       24 : surchauffe  0.57 K, v_max  6.01 cm/s
+  maillage_nx       48 : surchauffe  0.63 K, v_max  6.58 cm/s
+  maillage_nx       96 : surchauffe  0.64 K, v_max  6.85 cm/s
+  nu_eff        0.0025 : surchauffe  0.72 K, v_max  7.64 cm/s
+  nu_eff         0.005 : surchauffe  0.63 K, v_max  6.58 cm/s
+  nu_eff          0.01 : surchauffe  0.55 K, v_max  5.11 cm/s
+
+Figures écrites dans C:\Users\maxim\Documents\IMT\Projets\convection\figures

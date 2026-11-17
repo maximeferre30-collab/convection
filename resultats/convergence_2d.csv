@@ -1,0 +1,7 @@
+etude,valeur,dT_point_chaud,v_max_cm_s
+maillage_nx,24,0.570,6.011
+maillage_nx,48,0.626,6.577
+maillage_nx,96,0.640,6.847
+nu_eff,0.0025,0.715,7.641
+nu_eff,0.005,0.626,6.577
+nu_eff,0.01,0.550,5.110
