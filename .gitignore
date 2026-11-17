@@ -4,3 +4,6 @@ __pycache__/
 .venv/
 # sorties Code_Saturne (niveau 3)
 RESU/
+cfd3d/resultats/*/champ_*.csv
+cfd3d/resultats/*/timer_stats.csv
+cfd3d/campagne.log
