@@ -252,8 +252,9 @@ SUFFIXE=_ebullition PISCINE_SORTIE_H=10 PISCINE_POST_H=5 bash cfd3d/lancer.sh co
   Ces délais sont supérieurs aux 103 h du § 2, parce que cette géométrie ne compte pas les 70 m³ de
   combustible et de racks.
 
-**Installation de Code_Saturne sous WSL (Ubuntu 24.04 ne fournit plus de paquet).** Installer d'abord les
-dépendances en root, puis compiler la version LTS :
+**Installation de Code_Saturne sous WSL (Ubuntu 24.04 ne fournit plus de paquet).** Ces commandes sont
+pour **bash, dans Ubuntu** : depuis PowerShell, taper d'abord `wsl` (PowerShell 5 ne connaît pas `&&`).
+Installer les dépendances en root, puis compiler la version LTS :
 
 ```bash
 sudo apt install build-essential gfortran autoconf automake libtool pkg-config bison flex \
