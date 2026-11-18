@@ -212,6 +212,20 @@ La surchauffe varie de moins de 5 % entre 28 000 et 227 000 mailles. Le maillage
   arrive à la surface et y cède ses pertes. **Le 0D est donc le bon modèle pour les délais d'ébullition**,
   et la 3D confirme qu'aucune ébullition locale ne précède l'ébullition globale.
 
+### Mise en convection (cas « coin », 3 h, une image par minute)
+
+![Mise en convection 3D](figures/3d_mise_en_convection.gif)
+
+Coupe verticale à y = 2,9 m, à travers le coin des assemblages chauds, colorée par T − T moyenne. On voit
+le panache chaud se former au-dessus des racks en quelques minutes, puis monter jusqu'à la surface. Il
+oscille ensuite autour d'une position moyenne, tandis que l'eau refroidie redescend dans le reste de la
+piscine. Cette animation a été obtenue avec :
+
+```bash
+SUFFIXE=_film PISCINE_SORTIE_H=100 PISCINE_POST_H=0.0166667 bash cfd3d/lancer.sh coin 48 3   # ~11 min
+pvpython cfd3d/visu_paraview.py --film <dossier>                                            # images PNG
+```
+
 ### Calcul long jusqu'à l'ébullition (cas « coin », 112 h)
 
 Le cas le plus pénalisant (assemblages chauds regroupés dans un coin) a été poursuivi de 30 °C jusqu'à

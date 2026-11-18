@@ -2,21 +2,31 @@
 
 Dans ParaView : View > Python Shell > Run Script, choisir ce fichier.
 En ligne de commande : pvpython visu_paraview.py [RESULTS.case] [--png image.png | --film dossier]
+Sans chemin, ouvre le dernier calcul « coin » trouvé dans WSL : le film (une image par minute,
+cas CAS_coin_nx48_film) s'il existe, sinon le calcul long jusqu'à l'ébullition.
 
 Affiche une coupe verticale à travers le coin des assemblages chauds, colorée par l'écart à la
 température moyenne de la piscine (ΔT = T − T_moy, échelle fixe). La piscine chauffe de 30 à 100 °C,
 mais les écarts locaux ne dépassent pas 1 K : colorer par T brute donne un cube uniforme qui passe du
 bleu au rouge. Les flèches montrent la vitesse de l'eau.
 """
+import glob
 import sys
 
 from paraview.simple import *
 
-CAS = (r"\\wsl.localhost\Ubuntu\home\maxim\cs\etudes\piscine\CAS_coin_nx48_ebullition"
-       r"\RESU\20261118-013109\postprocessing\RESULTS.case")
 args = [a for a in sys.argv[1:] if a]
 if args and not args[0].startswith("--"):
     CAS = args[0]
+else:
+    etudes = r"\\wsl.localhost\Ubuntu\home\*\cs\etudes\piscine"
+    trouves = [sorted(glob.glob(rf"{etudes}\CAS_coin_nx48_{v}\RESU\*\postprocessing\RESULTS.case"))
+               for v in ("film", "ebullition")]
+    trouves = [t for t in trouves if t]
+    if not trouves:
+        raise SystemExit("Aucun RESULTS.case trouvé : passer le chemin en argument.")
+    CAS = trouves[0][-1]  # le plus récent
+print("Ouverture de", CAS)
 
 piscine = EnSightReader(registrationName="piscine", CaseFileName=CAS)
 piscine.CellArrays = ["Temperature", "Velocity"]
@@ -56,16 +66,17 @@ barre.ComponentTitle = ""
 d.SetScalarBarVisibility(vue, True)
 
 f = Show(fleches, vue)
-ColorBy(f, None)
+f.ColorArrayName = ["POINTS", ""]
 f.AmbientColor = f.DiffuseColor = [0.1, 0.1, 0.1]
 
 contour = Show(eau, vue)
 contour.SetRepresentationType("Outline")
-ColorBy(contour, None)
+contour.ColorArrayName = ["POINTS", ""]
 
 temps = AnnotateTimeFilter(registrationName="temps", Input=piscine)
-temps.Format = "t = {time:.1f} h"
-temps.Scale = 1 / 3600
+court = max(piscine.TimestepValues or [0]) < 10 * 3600   # film de quelques heures : temps en minutes
+temps.Format = "t = {time:.0f} min" if court else "t = {time:.1f} h"
+temps.Scale = 1 / 60 if court else 1 / 3600
 Show(temps, vue).FontSize = 14
 moyenne = PythonAnnotation(registrationName="T_moyenne", Input=eau, ArrayAssociation="Cell Data",
                            Expression="'T moyenne = %.1f C' % (mean(Temperature) - 273.15)")
