@@ -104,3 +104,7 @@ if "--png" in args:
     SaveScreenshot(args[args.index("--png") + 1], vue, ImageResolution=[1280, 900])
 if "--film" in args:
     SaveAnimation(args[args.index("--film") + 1] + "/image.png", vue, ImageResolution=[1280, 900])
+if "--video" in args:  # --video film.mp4 [images par seconde]
+    i = args.index("--video")
+    ips = int(args[i + 2]) if len(args) > i + 2 and not args[i + 2].startswith("--") else 10
+    SaveAnimation(args[i + 1], vue, ImageResolution=[1920, 1080], FrameRate=ips)

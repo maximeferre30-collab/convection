@@ -32,6 +32,7 @@ crée-t-elle des points chauds que le bilan global ne voit pas ?
 pip install -r requirements.txt
 python scripts/niveau1_0d.py      # ~5 s  : courbes 0D, sensibilité, cas Fukushima 4
 python scripts/niveau2_2d.py      # ~20 min : 2D, validation 0D/2D, points chauds, maillage, animation
+python scripts/video_2d.py        # vidéo 2D Full HD de 30 °C à l'ébullition (coupe + courbes)
 python tests/test_modeles.py      # vérifications (ou : pytest)
 bash cfd3d/campagne.sh            # ~80 min, sous Linux/WSL : calculs Code_Saturne 3D (voir § 4)
 python cfd3d/post_3d.py           # post-traitement 3D et comparaison au 0D
@@ -152,6 +153,17 @@ occupe toute la piscine. Les vitesses atteignent 8 à 9 cm/s, et la boucle est �
 - Limite : ces chiffres sont à l'échelle de la maille (25 cm, plusieurs assemblages). L'écart
   gaine/eau à l'intérieur d'un assemblage n'est pas résolu, et l'intensité de la turbulence
   (ν_eff) déplace la surchauffe de ±15 %. Le niveau 3 (k-ω SST, 3D) retrouve le même ordre de grandeur.
+
+### Vidéo : de 30 °C à l'ébullition (cas « bord », 110 h)
+
+[![Vidéo 2D jusqu'à l'ébullition](figures/2d_video_ebullition_apercu.png)](figures/2d_video_ebullition.mp4)
+
+**[Voir la vidéo (MP4, 1920 × 1080, 18 s)](figures/2d_video_ebullition.mp4)**, avec une image toutes les
+15 min de temps physique. À gauche, la coupe est colorée par **T − T moyenne** sur une échelle fixe : la
+piscine chauffe de 70 K, alors que les écarts locaux restent inférieurs à 1 K. Les lignes noires sont
+les lignes de courant. À droite, la température monte vers 100 °C, la surchauffe du point chaud reste
+stable autour de 0,6–0,7 K, et la marge à l'ébullition locale s'annule en surface vers 109 h.
+Commande : `python scripts/video_2d.py`.
 
 ## 4. Niveau 3 – simulation 3D Code_Saturne
 
