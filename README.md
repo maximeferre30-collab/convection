@@ -15,7 +15,8 @@ crée-t-elle des points chauds que le bilan global ne voit pas ?
 - La convection naturelle brasse efficacement la piscine. Le point chaud reste **inférieur à 0,9 K**
   au-dessus de la moyenne, même avec les assemblages chauds regroupés dans un coin. La pression
   hydrostatique laisse une marge d'environ 17 °C à la saturation au sommet des racks : **l'ébullition
-  commence en surface**, et le modèle 0D suffit pour estimer les délais.
+  commence en surface**. Un calcul 3D de 112 h jusqu'à 100 °C le confirme : la surface atteint
+  l'ébullition à 1 h près du 0D, et le modèle 0D suffit pour estimer les délais.
 - Le paramètre dominant est **l'âge du combustible**, à travers la puissance résiduelle : le délai de
   découvrement est multiplié par 13 entre 7 jours et 3 ans de refroidissement.
 
@@ -211,6 +212,46 @@ La surchauffe varie de moins de 5 % entre 28 000 et 227 000 mailles. Le maillage
   arrive à la surface et y cède ses pertes. **Le 0D est donc le bon modèle pour les délais d'ébullition**,
   et la 3D confirme qu'aucune ébullition locale ne précède l'ébullition globale.
 
+### Calcul long jusqu'à l'ébullition (cas « coin », 112 h)
+
+Le cas le plus pénalisant (assemblages chauds regroupés dans un coin) a été poursuivi de 30 °C jusqu'à
+l'ébullition en surface. Cela représente 112 h physiques, environ 15 h de calcul sur 4 cœurs :
+
+```bash
+SUFFIXE=_ebullition PISCINE_SORTIE_H=10 PISCINE_POST_H=5 bash cfd3d/lancer.sh coin 48 112
+```
+
+![Montée vers l'ébullition](figures/3d_ebullition.png)
+
+| Instant où 100 °C est atteint | Temps |
+|---|---|
+| 3D : point le plus chaud de la surface | **109,5 h** |
+| 3D : température moyenne | 110,2 h |
+| 0D à masse constante (même hypothèse que la 3D) | 110,4 h |
+| 0D complet (eau évaporée retirée) | 108,6 h |
+
+| Vérification / résultat | Valeur |
+|---|---|
+| Bilan d'énergie sur 112 h | −0,004 % |
+| Écart max T moyenne 3D / 0D à masse constante | 0,05 K |
+| Surchauffe T_max − T_moy : au début → à l'ébullition | 1,0 K → **0,60 K** |
+| Surface la plus chaude − T moyenne | 0,15 à 0,25 K (fluctuations du panache) |
+| Marge minimale à la saturation locale avant l'ébullition en surface | 0,30 K, **en surface** |
+
+- **L'ébullition commence bien en surface.** Dans les racks, le point le plus chaud dépasse 100 °C sans
+  bouillir, car 8 m d'eau au-dessus portent sa saturation à environ 117 °C. Le point le plus proche de
+  la saturation est toujours en surface.
+- **La surchauffe diminue en chauffant**, de 1,0 à 0,6 K. L'eau chaude est moins visqueuse et se dilate
+  davantage (β passe de 3·10⁻⁴ à 7·10⁻⁴ K⁻¹), donc la convection devient plus vigoureuse. La conclusion
+  tirée des 6 premières heures reste valable près de 100 °C.
+- **Pas de couche chaude sous la surface, même quand les pertes dominent.** À 100 °C, l'évaporation évacue
+  1,2 MW, soit les trois quarts de la puissance. La 3D et le 0D donnent les mêmes pertes (panneau de
+  droite), parce que la surface reste à la température moyenne.
+- **Ce que la 3D ne représente pas.** L'ébullition locale n'est pas modélisée en 3D, et la masse d'eau
+  y reste constante. Retirer l'eau évaporée, comme le fait le 0D complet, avance l'ébullition de 1,8 h.
+  Ces délais sont supérieurs aux 103 h du § 2, parce que cette géométrie ne compte pas les 70 m³ de
+  combustible et de racks.
+
 **Installation de Code_Saturne sous WSL (Ubuntu 24.04 ne fournit plus de paquet).** Installer d'abord les
 dépendances en root, puis compiler la version LTS :
 
@@ -240,9 +281,8 @@ utiliser les filtres *Slice*, *Stream Tracer* et *Glyph*.
    spécifiquement pour les panaches thermiques confinés.
 4. **Racks en milieu poreux** – frein de Darcy linéaire non calibré sur les pertes de charge réelles des
    assemblages. La surchauffe est moyennée sur 25 cm : l'écart gaine/eau dans un sous-canal n'est pas résolu.
-5. **Durée de la 3D** – 6 h de transitoire (30 → 36 °C). La surchauffe est établie dès 20 min et stable ensuite,
-   mais le régime proche de 100 °C, où les pertes en surface dominent, n'a pas été simulé (environ 10 h de
-   calcul par cas).
+5. **Durée de la 3D** – seul le cas « coin » a été poursuivi jusqu'à 100 °C, et la 3D n'a pas de modèle
+   d'ébullition. Elle ne dit rien de la phase bouillante ni de la baisse du niveau : ces délais viennent du 0D.
 6. Hors périmètre : ébullition locale sous-refroidie, découvrement partiel et oxydation des gaines,
    échauffement de l'air du hall, appoint d'eau.
 

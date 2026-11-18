@@ -116,4 +116,65 @@ for nx in (32, 48, 64):
     m = (s["t_s"] > 3600) & (s["t_s"] <= 7200)
     print(f"  nx = {nx:3d} ({nx*round(nx*10/12)*round(nx*12.5/12):>7d} mailles) : T_moy {a2h('T_moy_C'):.3f} °C, "
           f"surchauffe {(s['T_max_C'] - s['T_moy_C'])[m].mean():.3f} K, v_max {100*s['v_max_m_s'][m].mean():.2f} cm/s")
+# --- 4. Calcul long jusqu'à l'ébullition (cas « coin ») ------------------------------------------
+nom = "coin_nx48_ebullition"
+if (RES / nom).exists():
+    from scipy.integrate import solve_ivp
+    from piscine.physique import CP, flux_pertes
+
+    s = series(nom)
+    t = s["t_s"]
+    # 0D à masse constante : même hypothèse que la 3D (Boussinesq, pas de perte de masse par évaporation)
+    m0 = ref.masse(ref.niveau0, ref.T_init)
+    sc = solve_ivp(lambda tt, y: [(ref.puissance(tt) - flux_pertes(y[0])[0] * ref.surface) / (m0 * CP)],
+                   (0, t[-1]), [ref.T_init], max_step=600, rtol=1e-8, dense_output=True)
+    T0c = sc.sol(t)[0]
+    r0l = simuler(ref, t_max=t[-1])
+    croise = lambda y, seuil: np.interp(seuil, y, t) / 3600 if y.max() >= seuil else None
+    t_surf = croise(s["T_surf_max_C"], 100.0)
+    t_moy3 = croise(s["T_moy_C"], 100.0)
+    t_0c = croise(T0c, 100.0)
+    apport = np.concatenate([[0], np.cumsum(np.diff(t) * 0.5 * ((s["P_W"] - s["pertes_W"])[1:]
+                                                               + (s["P_W"] - s["pertes_W"])[:-1]))])
+    k = np.searchsorted(t, (t_surf or t[-1] / 3600) * 3600)  # jusqu'à l'ébullition en surface
+    print(f"\nCalcul long « coin » ({t[-1]/3600:.0f} h) :")
+    print(f"  bilan d'énergie : {100*((s['energie_J'][-1]-s['energie_J'][0])/apport[-1]-1):+.3f} %")
+    print(f"  écart max T_moy 3D / 0D à masse constante : {np.abs(s['T_moy_C'] - T0c)[:k].max():.2f} K")
+    h1 = lambda x: f"{x:.1f} h" if x else "non atteint"
+    print(f"  100 °C atteint : T_surf_max 3D {h1(t_surf)} ; T_moy 3D {h1(t_moy3)} ; 0D masse constante {h1(t_0c)} ; "
+          f"0D complet {h1(r0l['t_ebul'] / 3600 if r0l['t_ebul'] else None)}")
+    print(f"  surchauffe T_max - T_moy à l'ébullition en surface : {(s['T_max_C']-s['T_moy_C'])[k-1]:.2f} K ; "
+          f"T_surf_max - T_moy : {(s['T_surf_max_C']-s['T_moy_C'])[k-1]:.2f} K")
+    print(f"  marge minimale à la saturation locale avant ébullition en surface : {s['marge_sat_K'][:k].min():.2f} K "
+          f"(= 100 - T_surf_max : {100 - s['T_surf_max_C'][k-1]:.2f} K)")
+
+    fig, (a1, a3, a2) = plt.subplots(1, 3, figsize=(17, 4.2))
+    h = t / 3600
+    a1.plot(r0l["t"] / 3600, r0l["T"], "k:", lw=1, label="0D complet (masse évaporée retirée)")
+    a1.plot(h, T0c, "k-", lw=2, label="0D à masse constante (hypothèse de la 3D)")
+    a1.plot(h, s["T_moy_C"], "--", c="C2", label="3D : moyenne")
+    a1.plot(h, s["T_max_C"], "-", c="C3", lw=0.8, label="3D : maximum (racks)")
+    a1.plot(h, s["T_surf_max_C"], "-", c="C1", lw=0.8, label="3D : maximum en surface")
+    a1.axhline(100, c="gray", lw=0.8)
+    if t_surf:
+        a1.axvline(t_surf, c="C1", ls=":", lw=1)
+    a1.set(xlabel="temps (h)", ylabel="T (°C)", title="Assemblages chauds dans un coin : montée vers l'ébullition")
+    a3.plot(h, s["T_max_C"] - s["T_moy_C"], c="C3", lw=0.8, label="T_max − T_moy (racks)")
+    a3.plot(h, s["T_surf_max_C"] - s["T_moy_C"], c="C1", lw=0.8, label="T_surf_max − T_moy")
+    a3.plot(h, s["marge_sat_K"] / 20, c="C0", label="marge à la saturation locale / 20")
+    a3.axhline(0, c="gray", lw=0.8)
+    if t_surf:
+        a3.axvline(t_surf, c="C1", ls=":", lw=1)
+    a3.set(xlabel="temps (h)", ylabel="K", ylim=(-0.5, 2.5), title="Surchauffes locales et marge à l'ébullition")
+    a2.plot(h, s["P_W"] / 1e6, label="puissance résiduelle")
+    a2.plot(h, s["pertes_W"] / 1e6, label="pertes en surface (3D)")
+    a2.plot(h, flux_pertes(T0c)[0] * ref.surface / 1e6, "k--", lw=1, label="pertes en surface (0D)")
+    a2.set(xlabel="temps (h)", ylabel="MW", title="Bilan de puissance")
+    for a in (a1, a3, a2):
+        a.grid(alpha=0.3)
+        a.legend(fontsize=7)
+    fig.tight_layout()
+    fig.savefig(FIG / "3d_ebullition.png", dpi=150)
+    print("Figure :", FIG / "3d_ebullition.png")
+
 print("\nFigures :", FIG / "3d_vs_0d.png", FIG / "3d_coupes.png")

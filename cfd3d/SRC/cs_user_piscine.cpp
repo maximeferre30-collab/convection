@@ -15,6 +15,7 @@
  *   PISCINE_NX           cellules selon x (y et z en proportion), défaut 48
  *   PISCINE_DUREE_H      durée physique simulée (h), défaut 6
  *   PISCINE_SORTIE_H     période des instantanés CSV (h), défaut 1
+ *   PISCINE_POST_H       période des sorties EnSight/ParaView (h), défaut 0,5
  *============================================================================*/
 
 #include "base/cs_defs.h"
@@ -81,6 +82,17 @@ _puissance(double t)
 {
   double ts = T_REFROID + t;
   return 0.0622*P0*(pow(ts, -0.2) - pow(ts + T_IRR, -0.2));
+}
+
+/* Saturation locale (°C) : 100 °C en surface + effet de la pression hydrostatique
+   (écart calculé par Antoine 99-374 °C, comme T_sat dans piscine/physique.py) */
+static double
+_Tsat_locale(double z)
+{
+  const double p_atm = 101325., p = p_atm + _rho(T_INIT)*9.81*(H - z);
+  double a = 1810.94/(8.14019 - log10(p/133.322));
+  double b = 1810.94/(8.14019 - log10(p_atm/133.322));
+  return 100. + a - b;
 }
 
 static bool
@@ -195,7 +207,7 @@ cs_user_postprocess_writers(void)
 {
   cs_post_define_writer(CS_POST_WRITER_DEFAULT, "results", "postprocessing",
                         "EnSight Gold", "", FVM_WRITER_FIXED_MESH,
-                        false, true, -1, 1800.);
+                        false, true, -1, 3600.*_env("PISCINE_POST_H", 0.5));
 }
 
 /*----------------------------------------------------------------------------
@@ -318,12 +330,14 @@ cs_user_extra_operations(cs_domain_t *domain)
   if (ts->t_cur >= t_serie + 300. || fin) {   /* toutes les 5 min */
     t_serie = ts->t_cur;
     double s[4] = {0., 0., 0., 0.};   /* ∫T dV, V, ∫T_surf dA, A */
-    double mx[2] = {-1e30, 0.};       /* T_max, |u|_max */
+    double mx[3] = {-1e30, 0., -1e30};  /* T_max, |u|_max, T_surf_max */
+    double marge = 1e30;                /* min (T_sat locale - T) */
     for (cs_lnum_t c = 0; c < m->n_cells; c++) {
       s[0] += T[c]*vol[c];
       s[1] += vol[c];
       mx[0] = fmax(mx[0], T[c]);
       mx[1] = fmax(mx[1], cs_math_3_norm(u[c]));
+      marge = fmin(marge, _Tsat_locale(xc[c][2]) - (T[c] - TK));
     }
     double q_surf = 0.;
     const cs_zone_t *zs = cs_boundary_zone_by_name("surface");
@@ -332,23 +346,25 @@ cs_user_extra_operations(cs_domain_t *domain)
       double Tf = T[m->b_face_cells[f_id]];
       double a = mq->b_face_surf[f_id];
       s[2] += Tf*a;
+      mx[2] = fmax(mx[2], Tf);
       s[3] += a;
       q_surf += _flux_pertes(Tf - TK)*a;
     }
     cs_parall_sum(4, CS_DOUBLE, s);
     cs_parall_sum(1, CS_DOUBLE, &q_surf);
-    cs_parall_max(2, CS_DOUBLE, mx);
+    cs_parall_max(3, CS_DOUBLE, mx);
+    cs_parall_min(1, CS_DOUBLE, &marge);
 
     if (cs_glob_rank_id <= 0) {
       FILE *fp = fopen("piscine_series.csv", entete ? "a" : "w");
       if (!entete)
         fprintf(fp, "t_s,T_moy_C,T_max_C,T_surf_C,v_max_m_s,P_W,pertes_W,"
-                    "energie_J\n");
+                    "energie_J,T_surf_max_C,marge_sat_K\n");
       entete = true;
       double rc = _rho(T_INIT)*CP;
-      fprintf(fp, "%.1f,%.5f,%.5f,%.5f,%.5e,%.6e,%.6e,%.10e\n",
+      fprintf(fp, "%.1f,%.5f,%.5f,%.5f,%.5e,%.6e,%.6e,%.10e,%.5f,%.4f\n",
               ts->t_cur, s[0]/s[1] - TK, mx[0] - TK, s[2]/s[3] - TK, mx[1],
-              _puissance(ts->t_cur), q_surf, rc*s[0]);
+              _puissance(ts->t_cur), q_surf, rc*s[0], mx[2] - TK, marge);
       fclose(fp);
     }
   }
