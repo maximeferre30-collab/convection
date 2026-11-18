@@ -266,7 +266,11 @@ cd ~/cs/src && ./sbin/bootstrap && mkdir ../build && cd ../build
 
 **Visualisation ParaView.** Ouvrir `~/cs/etudes/piscine/CAS_<cas>_nx48/RESU/<date>/postprocessing/RESULTS.case`
 (depuis Windows : `\\wsl.localhost\Ubuntu\home\<user>\cs\...`). Une sortie est écrite toutes les 30 min ;
-utiliser les filtres *Slice*, *Stream Tracer* et *Glyph*.
+utiliser les filtres *Slice*, *Stream Tracer* et *Glyph*. Le script `cfd3d/visu_paraview.py` prépare une
+vue toute faite : dans ParaView, *View → Python Shell → Run Script*. Il affiche une coupe à travers le coin
+chaud, colorée par **T − T moyenne** sur une échelle fixe, avec les vecteurs vitesse et une animation
+lisible. Colorer par T brute ne montre rien : la piscine chauffe de 70 K, mais les écarts locaux restent
+inférieurs à 1 K.
 
 ## 5. Limites et incertitudes (par ordre d'importance estimé)
 
